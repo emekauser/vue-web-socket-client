@@ -1,38 +1,86 @@
 <template>
-  <div class="submit-form">
-    <div v-if="!submitted">
-      <div class="form-group">
-        <label for="name">Name</label>
+  <div
+    class="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8"
+  >
+    <div class="max-w-md w-full space-y-8">
+      <div v-if="!submitted">
+        <div>
+          <img
+            class="mx-auto h-12 w-auto"
+            src="https://tailwindui.com/img/logos/workflow-mark-indigo-600.svg"
+            alt="Workflow"
+          />
+          <h2 class="mt-6 text-center text-3xl font-extrabold text-gray-900">
+            Sign in to your account
+          </h2>
+        </div>
         <input
           type="text"
           id="name"
+          class="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-t-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
           required
           v-model="user.name"
           name="title"
+          placeholder="Name"
         />
+
+        <button
+          @click="openChat"
+          class="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 mt-5"
+        >
+          Submit
+        </button>
+        <h4 class="mt-6 text-center text-3xl font-extrabold text-gray-900">
+          {{ users.length }} users online
+        </h4>
+        <div v-for="(user, i) in users" :key="i">
+          <p>{{ user.name }}</p>
+        </div>
       </div>
 
-      <button @click="openChat">Submit</button>
-    </div>
+      <div v-else>
+        <h2 class="mt-6 text-center text-3xl font-extrabold text-gray-900">
+          Roakay chat room
+        </h2>
+        <ul class="messages">
+          <li v-for="(chat, i) in messages" :key="i">
+            <Message
+              :data="{
+                message: chat.message,
+                name: chat.name,
+                created_at: chat.created_at
+              }"
+            />
+          </li>
+        </ul>
 
-    <div v-else>
-      <h4>You are welcome</h4>
-      <ul>
-        <li v-for="(chat, i) in messages" :key="i">
-          <Message
-            :data="{
-              message: chat.message,
-              name: chat.name,
-              created_at: chat.created_at
-            }"
+        <div style="bottom: 0px;" class="w-full flex">
+          <input
+            id="input"
+            autocomplete="off"
+            v-model="message"
+            class="flex-grow m-2 py-2 px-4 mr-1 rounded-full border border-gray-300 bg-gray-200 resize-none"
+            placeholder="Eneter message"
           />
-        </li>
-      </ul>
-
-      <input id="input" autocomplete="off" v-model="message" />
-      <button @click="sendMessage">
-        Send
-      </button>
+          <button @click="sendMessage" class="m-2" style="outline: none;">
+            <svg
+              class="svg-inline--fa text-indigo-600 fa-paper-plane fa-w-16 w-12 h-12 py-2 mr-2"
+              aria-hidden="true"
+              focusable="false"
+              data-prefix="fas"
+              data-icon="paper-plane"
+              role="img"
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 512 512"
+            >
+              <path
+                fill="currentColor"
+                d="M476 3.2L12.5 270.6c-18.1 10.4-15.8 35.6 2.2 43.2L121 358.4l287.3-253.2c5.5-4.9 13.3 2.6 8.6 8.3L176 407v80.5c0 23.6 28.5 32.9 42.5 15.8L282 426l124.6 52.2c14.2 6 30.4-2.9 33-18.2l72-432C515 7.8 493.3-6.8 476 3.2z"
+              />
+            </svg>
+          </button>
+        </div>
+      </div>
     </div>
   </div>
 </template>
@@ -49,11 +97,23 @@ export default {
   components: {
     Message
   },
+
+  mounted() {
+    API.getActiveUsers().then(response => {
+      this.users = response.data["data"];
+    });
+  },
+
+  updated() {
+    scrollToBottom();
+  },
+
   data() {
     return {
       user: {
         name: null
       },
+      users: [],
       submitted: false,
       messages: [],
       message: null
@@ -61,8 +121,13 @@ export default {
   },
   methods: {
     openChat() {
+      if (!this.user.name) {
+        return alert("Enter name");
+      }
+
       this.submitted = true;
       this.initiateSocket();
+      socket.emit("start", this.user.name);
 
       API.getAllMessages()
         .then(response => {
@@ -87,72 +152,27 @@ export default {
         transports: ["websocket"]
       });
 
-      socket.on("success", data => {
-        console.log(data);
-      });
-
       socket.on("error", data => {
-        console.log(data);
+        alert(data);
       });
 
       socket.on("message", data => {
-        console.log(data);
         this.messages.push(data);
+        scrollToBottom();
       });
     }
   }
 };
+
+function scrollToBottom() {
+  const messagesUL = document.querySelector(".messages");
+  messagesUL.scrollTop = messagesUL.scrollHeight;
+}
 </script>
 
 <style>
-body {
-  margin: 0;
-  padding-bottom: 3rem;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica,
-    Arial, sans-serif;
-}
-
-#form {
-  background: rgba(0, 0, 0, 0.15);
-  padding: 0.25rem;
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  display: flex;
-  height: 3rem;
-  box-sizing: border-box;
-  backdrop-filter: blur(10px);
-}
-#input {
-  border: none;
-  padding: 0 1rem;
-  flex-grow: 1;
-  border-radius: 2rem;
-  margin: 0.25rem;
-}
-#input:focus {
-  outline: none;
-}
-#form > button {
-  background: #333;
-  border: none;
-  padding: 0 1rem;
-  margin: 0.25rem;
-  border-radius: 3px;
-  outline: none;
-  color: #fff;
-}
-
-#messages {
-  list-style-type: none;
-  margin: 0;
-  padding: 0;
-}
-#messages > li {
-  padding: 0.5rem 1rem;
-}
-#messages > li:nth-child(odd) {
-  background: #efefef;
+.messages {
+  height: 500px;
+  overflow-y: scroll;
 }
 </style>
