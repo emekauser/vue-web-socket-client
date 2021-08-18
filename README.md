@@ -1,4 +1,4 @@
-# rockay-ui
+# vue-web-socket-client
 
 ## Project setup
 ```
