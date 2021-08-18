@@ -40,7 +40,7 @@
 
       <div v-else>
         <h2 class="mt-6 text-center text-3xl font-extrabold text-gray-900">
-          Roakay chat room
+          Chat room
         </h2>
         <ul class="messages">
           <li v-for="(chat, i) in messages" :key="i">
